@@ -44,4 +44,4 @@ for(j in numlist){
 }
 
 # Save file
-write.csv(apgroup_mean, file = file.path("02_DataCreated/1_apmeans.csv"), row.names=FALSE)
+write.csv(apgroup_mean, file = file.path("../mh-execute/inputs/background-air-pollution/1_apmeans.csv"), row.names=FALSE)
