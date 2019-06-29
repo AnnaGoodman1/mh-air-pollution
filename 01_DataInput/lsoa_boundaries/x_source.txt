@@ -1,0 +1,4 @@
+Lower Layer Super Output Areas (December 2011) Super Generalised Clipped Boundaries in England and Wales:
+	http://geoportal.statistics.gov.uk/datasets/da831f80764346889837c72508f046fa_3
+
+	download: http://geoportal.statistics.gov.uk/datasets/da831f80764346889837c72508f046fa_3.zip
