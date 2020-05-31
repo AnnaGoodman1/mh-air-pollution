@@ -4,7 +4,7 @@ library(dplyr)
 library(raster)
 library(rmapshaper)
 library(sp)
-library(rgdal) 
+library(rgdal)
 
 proj_27700 <- CRS("+init=epsg:27700")   # UK easting/northing projection - 'projected' (need if working in metres)
 
