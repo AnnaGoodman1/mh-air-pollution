@@ -24,6 +24,10 @@ LAlistF <- read.csv("../mh-execute/inputs/mh_regions_lad_lookup.csv")
 
 LAwithCR <- left_join(LAlist, LAlistF, by = c("LANames" = "lad11nm"))
 
+#test change in concetration by LAs
+LAwithCR_cocen <- LAwithCR %>%
+  mutate(conchange = runif(84, 0.05, 0.5))
+
 PRJc <- "+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +datum=OSGB36 +units=m +no_defs"
 
 ############ if zipped files and folders ######
@@ -57,6 +61,8 @@ asctotifprj <- function(LAList, Globalpath, Projection) {
   }
   
 }
+
+
 
 #call the function
 asctotifprj(LAlist, Globalpath, PRJc)
@@ -170,8 +176,32 @@ for (m in 1:length(LAlistMan)) {
   
 }
 
+##################### changed concentration for all LAs ################
 
 
+
+for (cla in 1:length(LAwithCR_cocen$LANames)) {
+  
+  lahomeC <- as.character(LAwithCR_cocen$LANames[cla])
+  
+  print(lahomeC)
+  
+  changecon <- LAwithCR_cocen$conchange[cla]
+  
+  print(changecon)
+  
+  lanonlocalraster <- raster(paste0(Globalpath, lahomeC, '/','AggNOxR0.tif'))
+  
+  changeconraster <- lanonlocalraster * changecon
+  
+  print(lanonlocalraster)
+  
+  writeRaster(changeconraster, filename= file.path(Globalpath, lahomeC,  "changeconrasterR0.tif"), format="GTiff", overwrite=TRUE)
+
+}
+
+
+#lanonlocalraster <- raster(paste0(Globalpath, "Bolton", "/", 'AggNOxR0.tif'))
 
 ######################## Blame Matrix #########################
 
@@ -185,7 +215,7 @@ for (crh in 1:length(CityRegions)) {
   
   print(crigon)
   
-  citylahome <- subset (LAwithCR, cityregion == crigon)
+  citylahome <- subset (LAwithCR_cocen, cityregion == crigon)
   
   CRfilela <- list()
   
@@ -193,7 +223,7 @@ for (crh in 1:length(CityRegions)) {
     
     crlahome <- as.character(citylahome$LAName[clarg])
     
-    CRfilela [clarg] <- list.files(path = paste0(Globalpath, crlahome),pattern = "AggNOxR0.tif$",full.names = TRUE, recursive = TRUE)
+    CRfilela [clarg] <- list.files(path = paste0(Globalpath, crlahome),pattern = "changeconrasterR0.tif$",full.names = TRUE, recursive = TRUE)
     
     print(crlahome)
   }
@@ -211,6 +241,7 @@ for (crh in 1:length(CityRegions)) {
 
     crlahomeX <- as.character(citylahome$LAName[clarg])
     print(crlahomeX)
+  
     
     funX <- function(x) {sum((x [-clarg]))}
     
@@ -237,7 +268,7 @@ for (crh in 1:length(CityRegions)) {
 
 
 
-##################### belem matric non-local if #############
+##################### blame matrix non-local if ############# TEST
 
 
 CityRegions <- list ('greatermanchester', 'nottingham', 'bristol')
@@ -250,7 +281,7 @@ for (crh in 1:length(CityRegions)) {
   
   print(crigon)
   
-  citylahome <- subset (LAwithCR, cityregion == crigon)
+  citylahome <- subset (LAwithCR_cocen, cityregion == crigon)
   
   CRfilela <- list()
   
@@ -258,7 +289,7 @@ for (crh in 1:length(CityRegions)) {
     
     crlahome <- as.character(citylahome$LAName[clarg])
     
-    CRfilela [clarg] <- list.files(path = paste0(Globalpath, crlahome),pattern = "NonLIFNx.tif$",full.names = TRUE, recursive = TRUE)
+    CRfilela [clarg] <- list.files(path = paste0(Globalpath, crlahome),pattern = "AggNOxR0.tif$",full.names = TRUE, recursive = TRUE)
     
     print(crlahome)
   }
@@ -269,6 +300,9 @@ for (crh in 1:length(CityRegions)) {
   
   CRLAfilesStack <- stack(CRLAfilesS)
   
+  print(CRLAfilesStack)
+  
+  conchange = list()
   
   for (clarg in 1:length(citylahome$LANames)) {
     
@@ -277,11 +311,17 @@ for (crh in 1:length(CityRegions)) {
     crlahomeX <- as.character(citylahome$LAName[clarg])
     print(crlahomeX)
     
-    funX <- function(x) {sum((x [-clarg]))}
+    conchange [clarg] <- citylahome$conchange 
+    
+    print(conchange)
+    
+    funX <- function(x) {x * conchange}
     
     ConOthers <- calc (CRLAfilesStack, funX)
     
-    writeRaster(ConOthers, filename= file.path(Globalpath, crlahomeX,  "NonLocalOthers.tif"), format="GTiff", overwrite=TRUE)
+    Conothers <- stackApply(CRLAfilesStack, indices= 1, funX)
+    
+    writeRaster(ConOthers, filename= file.path(Globalpath, crlahomeX,  "NonLocalOthers2.tif"), format="GTiff", overwrite=TRUE)
   }
   
   if (CityRegions == 'greatermanchester'){
@@ -293,6 +333,17 @@ for (crh in 1:length(CityRegions)) {
 }
 
 
+#########
+
+#loop in the stack
+for (i in 1:nlayers (CRLAfilesStack)) {
+  
+  #print(CRLAfilesStack)
+  
+  rn <- (CRLAfilesStack[i])
+  
+  print(rn)
+}
 
 
 

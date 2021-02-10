@@ -117,7 +117,6 @@ for (m in 1:length(LAlist$LANames)) {
 
 #################testing for Manchester ##############
 
-
 for (m in 1:length(LAlistMan)) {
   
   lahome <- as.character(LAlistMan[m])
