@@ -198,9 +198,11 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
   
   print(vkmsum)
   
+  #import local in-square impact factor
   LocalIF <- raster(paste0(Globalpath, lahomeName, '/','LIFNx.tif'))
   
-  NonLocalIF <- InsquareIF <- raster(paste0(Globalpath, lahomeName, '/','NonLIFNx.tif'))
+  #import non-local impact factor
+  NonLocalIF <- raster(paste0(Globalpath, lahomeName, '/','NonLIFNx.tif'))
   
   SorroundLAChangecon <- raster(paste0(Globalpath, lahomeName, '/','ChangeConOthers.tif'))
   
