@@ -202,7 +202,7 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
   
   NonLocalIF <- InsquareIF <- raster(paste0(Globalpath, lahomeName, '/','NonLIFNx.tif'))
   
-  SorroundLAChangecon <- InsquareIF <- raster(paste0(Globalpath, lahomeName, '/','ChangeConOthers.tif'))
+  SorroundLAChangecon <- raster(paste0(Globalpath, lahomeName, '/','ChangeConOthers.tif'))
   
 
   LAchangedcon <- (((changecon * LocalIF) + (changecon * NonLocalIF * (vkmsum - TotalVKM))) + SorroundLAChangecon)
