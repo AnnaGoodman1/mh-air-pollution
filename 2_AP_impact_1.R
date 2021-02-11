@@ -60,12 +60,11 @@ for (m in 1:length(LAlist$LANames)) {
   crs(LifNx) <- PRJc
   print(LifNx)
   
-  #non local LA impact factor
+  #non local authority LA impact factor
   #for total vkm without motor cycle
   fun2 <- function(x) {sum((x[13] - x[14]) + x[15])}
   VKMtotal <- calc (LAtifStack, fun2) #calculate both Petrol and Diesel VKM minus motor cycle vkm
   crs(VKMtotal) <- PRJc
-  
   vkmvect <- sum(as.vector(VKMtotal)) #get the LA specific total vkm
 
   #function to estimate non local IF for each LA
@@ -102,6 +101,9 @@ LAwithCR_cocen <- LAwithCR %>%
   mutate(conchange = 0.9) #10% reduction in concentration
   #mutate(conchange = runif(84, 0.05, 0.5)) #create random concentration change for each LA. 
 #In the main calculation this would come from scenarios
+
+#LAwithCR_cocen2 <- LAwithCR %>%
+  #mutate(conchange = runif(84, 0.05, 0.5)) #create random concentration change for each LA5
 
 #loop in each LA to estimate the changed concentration for combined R0 layer. 
 #this estimation process is conducted to add the change concentration of surrounding to a LA, surrounded by other LAs in city region. 
@@ -187,7 +189,6 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
   
   lahomeC <- as.character(LAwithCR_cocen$LANames[cla])
   
-  
   #changecon <- LAwithCR_cocen$conchange[laname] #Scenario based change concentration of each LA
   changecon <- 0.9
   print(changecon)
@@ -206,8 +207,7 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
   
   SorroundLAChangecon <- raster(paste0(Globalpath, lahomeName, '/','ChangeConOthers.tif'))
   
-
-  LAchangedcon <- (((changecon * LocalIF) + (changecon * NonLocalIF * (vkmsum - TotalVKM))) + SorroundLAChangecon)
+  LAchangedcon <- (((changecon * LocalIF * TotalVKM) + (changecon * NonLocalIF * (vkmsum - TotalVKM))) + SorroundLAChangecon)
 
   
   #Save the changed combined R0 concentration layer for each LA
