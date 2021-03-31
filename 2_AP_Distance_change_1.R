@@ -35,7 +35,6 @@ changedist <- left_join(base_emission_dist, scen_emission_dist, by = 'la') %>%
          changemotorratio = (b_motorways- s_motorways)/ b_motorways,
          changallratio = (basedrivedist - scebdrivedist)/basedrivedist)
 
-
-
+write.csv(changedist, file = file.path("../mh-air-pollution/01_DataInput/APdistance_change.csv"), row.names=FALSE)
 
 

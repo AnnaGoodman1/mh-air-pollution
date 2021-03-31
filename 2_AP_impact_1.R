@@ -18,7 +18,10 @@ Globalpath<- "C:/Users/S M Labib/Desktop/METAHIT/mh-air-pollution/new_air_impact
 #Names of the LA folder
 LAlist <- read.csv(paste0(Globalpath, "lafolders.csv")) 
 
+scenchangedist <- read.csv("../mh-air-pollution/01_DataInput/APdistance_change.csv")
+
 LAlistF <- read.csv("../mh-execute/inputs/mh_regions_lad_lookup.csv")
+
 
 LAwithCR <- left_join(LAlist, LAlistF, by = c("LANames" = "lad11nm"))
 
@@ -95,12 +98,18 @@ for (m in 1:length(LAlist$LANames)) {
 
 
 ##################### changed concentration for all LAs #####################################
-
 #Hypothetical change in concentration by LAs
-LAwithCR_cocen <- LAwithCR %>%
-  mutate(conchange = 0.9) #10% reduction in concentration
+#This can be used if we want certain fixed changes for all LAs
+#LAwithCR_cocen <- LAwithCR %>%
+  #mutate(conchange = 0.9) #10% reduction in concentration
   #mutate(conchange = runif(84, 0.05, 0.5)) #create random concentration change for each LA. 
 #In the main calculation this would come from scenarios
+
+scenchangedistadd <- scenchangedist %>%
+  dplyr::select('la', 'changallratio')
+
+LAwithCR_cocen <- left_join(LAwithCR, scenchangedistadd, by = c("lad11cd" = "la")) %>%
+  dplyr::rename(conchange = changallratio)
 
 #LAwithCR_cocen2 <- LAwithCR %>%
   #mutate(conchange = runif(84, 0.05, 0.5)) #create random concentration change for each LA5
@@ -219,6 +228,6 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
 
 #clean unnecessary files or other files that do not overwrite.
 
-#do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "LAchangedconNOx.tif$",full.names = TRUE, recursive = TRUE)))
+do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "changeconrasterR0.tif$",full.names = TRUE, recursive = TRUE)))
 
 
