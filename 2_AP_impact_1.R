@@ -109,7 +109,8 @@ scenchangedistadd <- scenchangedist %>%
   dplyr::select('la', 'changallratio')
 
 LAwithCR_cocen <- left_join(LAwithCR, scenchangedistadd, by = c("lad11cd" = "la")) %>%
-  dplyr::rename(conchange = changallratio)
+  dplyr::rename(conchange = changallratio) %>%
+  dplyr::mutate(conchange = replace_na(conchange, 0.1)) #replace the NA values of the LA concentration with 0.1
 
 #LAwithCR_cocen2 <- LAwithCR %>%
   #mutate(conchange = runif(84, 0.05, 0.5)) #create random concentration change for each LA5
@@ -198,8 +199,8 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
   
   lahomeC <- as.character(LAwithCR_cocen$LANames[cla])
   
-  #changecon <- LAwithCR_cocen$conchange[laname] #Scenario based change concentration of each LA
-  changecon <- 0.9
+  changecon <- LAwithCR_cocen$conchange[laname] #Scenario based change concentration of each LA
+  #changecon <- 0.9 #if we want fixed change
   print(changecon)
   
   #read the total VKM for each LA and extract the sum of all cells
@@ -228,6 +229,6 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
 
 #clean unnecessary files or other files that do not overwrite.
 
-do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "changeconrasterR0.tif$",full.names = TRUE, recursive = TRUE)))
+do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "LAchangedconNOx.tif$",full.names = TRUE, recursive = TRUE)))
 
 
