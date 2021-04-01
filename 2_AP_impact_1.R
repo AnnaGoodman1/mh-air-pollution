@@ -13,7 +13,7 @@ library(sp)
 #Global path to the folders data stored
 Globalpath<- "C:/Users/S M Labib/Desktop/METAHIT/mh-air-pollution/new_air_impact/_LASpecific/"
 
-#setwd(Globalpath)
+setwd(Globalpath)
 
 #Names of the LA folder
 LAlist <- read.csv(paste0(Globalpath, "lafolders.csv")) 
@@ -199,7 +199,7 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
   
   lahomeC <- as.character(LAwithCR_cocen$LANames[cla])
   
-  changecon <- LAwithCR_cocen$conchange[laname] #Scenario based change concentration of each LA
+  changecon <- 1- LAwithCR_cocen$conchange[laname] #Scenario based change concentration of each LA
   #changecon <- 0.9 #if we want fixed change
   print(changecon)
   
@@ -230,5 +230,21 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
 #clean unnecessary files or other files that do not overwrite.
 
 do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "LAchangedconNOx.tif$",full.names = TRUE, recursive = TRUE)))
+
+#Base concentration
+NOXDis_R0alllist <- list.files(path =Globalpath,pattern = "NOX_DieselCars_R0.asc$",full.names = TRUE, recursive = TRUE )
+NOXDis_R0all_stack <- stack(NOXDis_R0alllist)
+NOXDis_R0all <- calc(NOXDis_R0all_stack, fun = sum, na.rm =T)
+writeRaster(NOXDis_R0all,'NOxBasecon_all_LAs.tif',options=c('TFW=YES'))
+
+
+
+#scen concentration after running all the LAs
+scencon <- list.files(path =Globalpath,pattern = "LAchangedconNOx.tif$",full.names = TRUE, recursive = TRUE )
+scencon_stack <- stack(scencon)
+scencon_all_LAs <- calc(scencon_stack, fun = sum, na.rm =T)
+writeRaster(scencon_all_LAs,'scencon_all_LAs.tif',options=c('TFW=YES'))
+
+
 
 
