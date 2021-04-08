@@ -13,7 +13,7 @@ library(sp)
 #Global path to the folders data stored
 Globalpath<- "C:/Users/S M Labib/Desktop/METAHIT/mh-air-pollution/new_air_impact/_LASpecific/"
 
-setwd(Globalpath)
+#setwd(Globalpath)
 
 #Names of the LA folder
 LAlist <- read.csv(paste0(Globalpath, "lafolders.csv")) 
@@ -53,11 +53,16 @@ for (m in 1:length(LAlist$LANames)) {
   AggNOxR0 <- calc(LAtifStack, fun0)
   crs(AggNOxR0) <- PRJc #project to BNG
   
-  #local impact factor for in-square VKM and emission of NOx
   #The index numbers are layer index in the stack, here: 
   #x[1] is NOX_DieselCars_InSqConc.asc
   #x[3] is NOX_PetrolCars_InSqConc.asc
-  #x[13] is s46_vkm_2020.asc
+  #x[2] is NOX_DieselCars_R0.asc
+  #x[4] is NOX_PetrolCars_R0.asc
+  #x[13] is s46_vkm_2020.asc, petrol car vkm
+  #x[14] is s46mc_vkm_2020.asc, motor cycle
+  #x[15] is s47_vkm_2020.asc, diesel car vkm
+  
+  #local impact factor for in-square VKM and emission of NOx
   fun1 <- function(x) {(x[1] + x[3])/((x[13] - x[14]) + x[15])} 
   LifNx <- calc(LAtifStack, fun1)
   crs(LifNx) <- PRJc
@@ -75,7 +80,6 @@ for (m in 1:length(LAlist$LANames)) {
   #non local impact factor for NOx for each la
   NonLifNx <- calc (LAtifStack, fun3)
   crs(NonLifNx) <- PRJc
-  
   
   
   #save the combined of R0 layer for each LA
@@ -204,8 +208,8 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
   print(changecon)
   
   #read the total VKM for each LA and extract the sum of all cells
-  TotalVKM <- raster(paste0(Globalpath, lahomeName, '/','VKMtotal_2020.tif'))
-  vkmsum <- sum(as.vector(TotalVKM))
+  CellVKM <- raster(paste0(Globalpath, lahomeName, '/','VKMtotal_2020.tif'))
+  vkmsum <- sum(as.vector(CellVKM))
   
   print(vkmsum)
   
@@ -217,11 +221,17 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
   
   SorroundLAChangecon <- raster(paste0(Globalpath, lahomeName, '/','ChangeConOthers.tif'))
   
-  LAchangedcon <- (((changecon * LocalIF * TotalVKM) + (changecon * NonLocalIF * (vkmsum - TotalVKM))) + SorroundLAChangecon)
+  LAchangedcon <- (((changecon * LocalIF * CellVKM) + (changecon * NonLocalIF * (vkmsum - CellVKM))) + SorroundLAChangecon)
 
+  
+  basecon <- raster(paste0(Globalpath, lahomeName, '/','AggNOxR0.tif'))
+  
+  diffcon <- basecon - LAchangedcon
   
   #Save the changed combined R0 concentration layer for each LA
   writeRaster(LAchangedcon, filename= file.path(Globalpath, lahomeName,  "LAchangedconNOx.tif"), format="GTiff", overwrite=TRUE)
+  
+  writeRaster(diffcon, filename= file.path(Globalpath, lahomeName,  "diffconNOx.tif"), format="GTiff", overwrite=TRUE)
   
 }
 
@@ -230,6 +240,14 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
 #clean unnecessary files or other files that do not overwrite.
 
 do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "LAchangedconNOx.tif$",full.names = TRUE, recursive = TRUE)))
+
+
+#change concentration after running all the LAs
+chcon <- list.files(path =Globalpath,pattern = "diffconNOx.tif$",full.names = TRUE, recursive = TRUE )
+chcon_stack <- stack(chcon)
+chcon_all_LAs <- calc(chcon_stack, fun = sum, na.rm =T)
+writeRaster(chcon_all_LAs,filename=file.path(Globalpath, "chcon_all_LAs.tif"),options=c('TFW=YES'))
+
 
 #Base concentration
 NOXDis_R0alllist <- list.files(path =Globalpath,pattern = "NOX_DieselCars_R0.asc$",full.names = TRUE, recursive = TRUE )
