@@ -10,7 +10,7 @@ library(raster)
 library(sf)
 library(sp)
 
-#Global path to the folders data stored
+#Global path to the folders data stored, change it based on the folder location
 Globalpath<- "C:/Users/S M Labib/Desktop/METAHIT/mh-air-pollution/new_air_impact/_LASpecific/"
 
 #setwd(Globalpath)
@@ -29,10 +29,10 @@ PRJc <- "+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-10000
 
 ############ if zipped files and folders #################################
 #list all the files in a directory
-zipF <- list.files(path = Globalpath, pattern = "*.zip", full.names = TRUE)
-outDir<- Globalpath
+#zipF <- list.files(path = Globalpath, pattern = "*.zip", full.names = TRUE)
+#outDir<- Globalpath
 # unzip the zipped files
-ldply(.data = zipF, .fun = unzip, exdir = outDir)
+#ldply(.data = zipF, .fun = unzip, exdir = outDir)
 
 ############# local and non-local impact factor for each LA ###############
 
@@ -100,6 +100,11 @@ for (m in 1:length(LAlist$LANames)) {
 
 }
 
+###### Load base concentration layer ##############
+
+
+basecon <- raster(paste0(Globalpath, '/',  '_Base_Concs_NAEI2018_2020', '/', 'nox_background_conc_2020.asc'))
+
 
 ##################### changed concentration for all LAs #####################################
 #Hypothetical change in concentration by LAs
@@ -107,6 +112,7 @@ for (m in 1:length(LAlist$LANames)) {
 #LAwithCR_cocen <- LAwithCR %>%
   #mutate(conchange = 0.9) #10% reduction in concentration
   #mutate(conchange = runif(84, 0.05, 0.5)) #create random concentration change for each LA. 
+
 #In the main calculation this would come from scenarios
 
 scenchangedistadd <- scenchangedist %>%
@@ -196,6 +202,7 @@ for (crh in 1:length(CityRegions)) {
 
 ######### Estimating changed concentration for each LA based on impact factors and surrounding LAs in the city region #########
 
+
 for (laname in 1:length(LAwithCR_cocen$LANames)) {
   
   lahomeName <- as.character(LAwithCR_cocen$LANames[laname])
@@ -224,8 +231,6 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
   LAchangedcon <- (((changecon * LocalIF * CellVKM) + (changecon * NonLocalIF * (vkmsum - CellVKM))) + SorroundLAChangecon)
 
   
-  basecon <- raster(paste0(Globalpath, lahomeName, '/','AggNOxR0.tif'))
-  
   diffcon <- basecon - LAchangedcon
   
   #Save the changed combined R0 concentration layer for each LA
@@ -239,21 +244,15 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
 
 #clean unnecessary files or other files that do not overwrite.
 
-do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "LAchangedconNOx.tif$",full.names = TRUE, recursive = TRUE)))
+#do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "LAchangedconNOx.tif$",full.names = TRUE, recursive = TRUE)))
 
 
 #change concentration after running all the LAs
 chcon <- list.files(path =Globalpath,pattern = "diffconNOx.tif$",full.names = TRUE, recursive = TRUE )
 chcon_stack <- stack(chcon)
 chcon_all_LAs <- calc(chcon_stack, fun = sum, na.rm =T)
-writeRaster(chcon_all_LAs,filename=file.path(Globalpath, "chcon_all_LAs.tif"),options=c('TFW=YES'))
+writeRaster(chcon_all_LAs,filename=file.path(Globalpath, "chcon_all_LAs.tif"),options=c('TFW=YES'), overwrite=TRUE)
 
-
-#Base concentration
-NOXDis_R0alllist <- list.files(path =Globalpath,pattern = "NOX_DieselCars_R0.asc$",full.names = TRUE, recursive = TRUE )
-NOXDis_R0all_stack <- stack(NOXDis_R0alllist)
-NOXDis_R0all <- calc(NOXDis_R0all_stack, fun = sum, na.rm =T)
-writeRaster(NOXDis_R0all,'NOxBasecon_all_LAs.tif',options=c('TFW=YES'))
 
 
 
@@ -261,8 +260,13 @@ writeRaster(NOXDis_R0all,'NOxBasecon_all_LAs.tif',options=c('TFW=YES'))
 scencon <- list.files(path =Globalpath,pattern = "LAchangedconNOx.tif$",full.names = TRUE, recursive = TRUE )
 scencon_stack <- stack(scencon)
 scencon_all_LAs <- calc(scencon_stack, fun = sum, na.rm =T)
-writeRaster(scencon_all_LAs,'scencon_all_LAs.tif',options=c('TFW=YES'))
+writeRaster(scencon_all_LAs,filename=file.path(Globalpath, 'scencon_all_LAs.tif'),options=c('TFW=YES'), overwrite=TRUE)
 
+#Non local impact running all the LAs
+NonLImpLAs <- list.files(path =Globalpath,pattern = "NonLIFNx.tif$",full.names = TRUE, recursive = TRUE )
+NonLImpLAs_stack <- stack(NonLImpLAs)
+NonLImpLAs_all_LAs <- calc(NonLImpLAs_stack, fun = sum, na.rm =T)
+writeRaster(NonLImpLAs_all_LAs,'NonLImpLAs_all_LAs.tif',options=c('TFW=YES'))
 
 
 
