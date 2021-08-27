@@ -3,29 +3,31 @@
 
 rm(list=ls())
 
-library(plyr)
-library(tidyverse)
-library(rgdal)
-library(raster)
-library(sf)
-library(sp)
+{
+  #Load libraris and set directories
+  library(plyr)
+  library(tidyverse)
+  library(rgdal)
+  library(raster)
+  library(sf)
+  library(sp)
 
-#Global path to the folders data stored, change it based on the folder location
-Globalpath<- "C:/Users/S M Labib/Desktop/METAHIT/mh-air-pollution/new_air_impact/_LASpecific/"
+  #Global path to the folders data stored, change it based on the folder location
+  Globalpath<- "C:/Users/S M Labib/Desktop/METAHIT/mh-air-pollution/new_air_impact/_LASpecific/"
 
-#setwd(Globalpath)
+  #setwd(Globalpath)
 
-#Names of the LA folder
-LAlist <- read.csv(paste0(Globalpath, "lafolders.csv")) 
+  #Names of the LA folder
+  LAlist <- read.csv(paste0(Globalpath, "lafolders.csv")) 
 
-scenchangedist <- read.csv("../mh-air-pollution/01_DataInput/APdistance_changeS2.csv")
+  LAlistF <- read.csv("../mh-execute/inputs/mh_regions_lad_lookup.csv")
 
-LAlistF <- read.csv("../mh-execute/inputs/mh_regions_lad_lookup.csv")
+  LAwithCR <- left_join(LAlist, LAlistF, by = c("LANames" = "lad11nm"))
 
-
-LAwithCR <- left_join(LAlist, LAlistF, by = c("LANames" = "lad11nm"))
-
-PRJc <- "+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +datum=OSGB36 +units=m +no_defs"
+  PRJc <- "+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +datum=OSGB36 +units=m +no_defs"
+  
+  CityRegions <- list ('bristol', 'greatermanchester', 'leeds', 'liverpool', 'london', 'northeast','nottingham', 'sheffield', 'westmidlands')
+}
 
 ############ if zipped files and folders #################################
 #list all the files in a directory
@@ -35,6 +37,8 @@ PRJc <- "+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-10000
 #ldply(.data = zipF, .fun = unzip, exdir = outDir)
 
 ############# local and non-local impact factor for each LA ###############
+
+#this section of code need to do once. If all these impact factor cacluated for the base files, we do not need to run this bit again
 
 for (m in 1:length(LAlist$LANames)) {
   
@@ -48,10 +52,6 @@ for (m in 1:length(LAlist$LANames)) {
   print(ascfilela)
   
   LAtifStack <- stack(ascfilela)
-  
-  fun0 <- function(x) {x[2] + x[4]} #sum of NOx across agglomeration in each cell, the R0 files for petrol and diesel car
-  AggNOxR0 <- calc(LAtifStack, fun0)
-  crs(AggNOxR0) <- PRJc #project to BNG
   
   #The index numbers are layer index in the stack, here: 
   #x[1] is NOX_DieselCars_InSqConc.asc
@@ -70,25 +70,49 @@ for (m in 1:length(LAlist$LANames)) {
   #x[14] is s46mc_vkm_2020.asc, motor cycle
   #x[15] is s47_vkm_2020.asc, diesel car vkm
   
-  #local impact factor for in-square VKM and emission of NOx
-  fun1 <- function(x) {(x[1] + x[3])/((x[13] - x[14]) + x[15])} 
-  LifNx <- calc(LAtifStack, fun1)
-  crs(LifNx) <- PRJc
-  print(LifNx)
-  
-  #non local authority LA impact factor
   #for total vkm without motor cycle
-  fun2 <- function(x) {sum((x[13] - x[14]) + x[15])}
-  VKMtotal <- calc (LAtifStack, fun2) #calculate both Petrol and Diesel VKM minus motor cycle vkm
+  fun0 <- function(x) {sum((x[13] - x[14]) + x[15])}
+  VKMtotal <- calc (LAtifStack, fun0) #calculate both Petrol and Diesel VKM minus motor cycle vkm
   crs(VKMtotal) <- PRJc
   vkmvect <- sum(as.vector(VKMtotal)) #get the LA specific total vkm
-
-  #function to estimate non local IF for each LA
-  fun3 <- function(x) {((x[2] + x[4]) - (x[1] + x[3]))/((vkmvect - (x[13] - x[14]) + x[15]))} 
-  #non local impact factor for NOx for each la
-  NonLifNx <- calc (LAtifStack, fun3)
-  crs(NonLifNx) <- PRJc
   
+  #sum of NOx across agglomeration in each cell, the R0 files for petrol and diesel car
+  #fun1 <- function(x) {x[2] + x[4]} 
+  #AggNOxR0 <- calc(LAtifStack, fun1)
+  #crs(AggNOxR0) <- PRJc #project to BNG
+  
+  #local impact factor for in-square VKM and emission of NOx
+  #fun2 <- function(x) {(x[1] + x[3])/((x[13] - x[14]) + x[15])} 
+  #LifNx <- calc(LAtifStack, fun2)
+  #crs(LifNx) <- PRJc
+  #print(LifNx)
+  
+  #non local authority LA impact factor
+  #function to estimate non local IF for each LA
+  #fun3 <- function(x) {((x[2] + x[4]) - (x[1] + x[3]))/((vkmvect - (x[13] - x[14]) + x[15]))} 
+  #non local impact factor for NOx for each la
+  #NonLifNx <- calc (LAtifStack, fun3)
+  #crs(NonLifNx) <- PRJc
+  
+  #sum of PM2.5 across agglomeration in each cell, the R0 files for petrol and diesel car
+  fun4 <- function(x) {x[5] + x[8] +x[11] + x[6] + x[9] + x[12]} 
+  AggPM25R0 <- calc(LAtifStack, fun4)
+  crs(AggPM25R0) <- PRJc
+  print(AggPM25R0)
+  
+  
+  #local impact factor for in-square VKM and emission of PM2.5
+  fun5 <- function(x) {(x[7] + x[10])/((x[13] - x[14]) + x[15])} 
+  LifPM <- calc(LAtifStack, fun5)
+  crs(LifPM ) <- PRJc
+  print(LifPM)
+  
+  #non local authority LA impact factor for PM2.5
+  #function to estimate non local IF for each LA
+  #fun6 <- function(x) {((x[5] + x[8] +x[11] + x[6] + x[9] + x[12]) - (x[7] + x[10]))/((vkmvect - (x[13] - x[14]) + x[15]))} 
+  #non local impact factor for NOx for each la
+  #NonLifPM <- calc (LAtifStack, fun6)
+  #crs(NonLifPM) <- PRJc
   
   #save the combined of R0 layer for each LA
   #writeRaster(AggNOxR0, filename= file.path(Globalpath, lahome, "AggNOxR0.tif"), format="GTiff", overwrite=TRUE)
@@ -103,6 +127,16 @@ for (m in 1:length(LAlist$LANames)) {
   #save the non local impact factor as tif file
   #writeRaster(NonLifNx, filename= file.path(Globalpath, lahome, "NonLIFNx.tif"), format="GTiff", overwrite=TRUE)
   
+  
+  #save the combined of R0 layer for each LA for PM2.5
+  writeRaster(AggPM25R0, filename= file.path(Globalpath, lahome, "AggPM25R0.tif"), format="GTiff", overwrite=TRUE)
+  
+  #save the local impact factor for PM2.5 as tif file
+  writeRaster(LifPM, filename= file.path(Globalpath, lahome, "LifPM.tif"), format="GTiff", overwrite=TRUE)
+  
+  #save the non local impact factor as tif file
+  writeRaster(NonLifPM, filename= file.path(Globalpath, lahome, "NonLifPM.tif"), format="GTiff", overwrite=TRUE)
+  
   #empty the list for the next LA
   ascfilela <- NA
 
@@ -115,6 +149,9 @@ for (m in 1:length(LAlist$LANames)) {
 #LAwithCR_cocen <- LAwithCR %>%
   #mutate(conchange = 0.9) #10% reduction in concentration
   #mutate(conchange = runif(84, 0.05, 0.5)) #create random concentration change for each LA. 
+
+
+scenchangedist <- read.csv("../mh-air-pollution/01_DataInput/APdistance_changeS2.csv")
 
 #In the main calculation this would come from scenarios
 
@@ -154,8 +191,6 @@ for (cla in 1:length(LAwithCR_cocen$LANames)) {
 }
 
 ##############Adding Changed concentration from other LAs within a city region ####################
-
-CityRegions <- list ('bristol', 'greatermanchester', 'leeds', 'liverpool', 'london', 'northeast','nottingham', 'sheffield', 'westmidlands')
 
 #CityRegions <- list ('greatermanchester')
 
@@ -247,7 +282,7 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
 
 #clean unnecessary files or other files that do not overwrite.
 
-do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "diffconNOxS2.tif$",full.names = TRUE, recursive = TRUE)))
+do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "LifPM.tif$",full.names = TRUE, recursive = TRUE)))
 
 
 #change concentration after running all the LAs
