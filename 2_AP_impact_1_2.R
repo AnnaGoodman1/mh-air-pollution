@@ -109,10 +109,10 @@ for (m in 1:length(LAlist$LANames)) {
   
   #non local authority LA impact factor for PM2.5
   #function to estimate non local IF for each LA
-  #fun6 <- function(x) {((x[5] + x[8] +x[11] + x[6] + x[9] + x[12]) - (x[7] + x[10]))/((vkmvect - (x[13] - x[14]) + x[15]))} 
+  fun6 <- function(x) {((x[5] + x[8] +x[11] + x[6] + x[9] + x[12]) - (x[7] + x[10]))/((vkmvect - (x[13] - x[14]) + x[15]))} 
   #non local impact factor for NOx for each la
-  #NonLifPM <- calc (LAtifStack, fun6)
-  #crs(NonLifPM) <- PRJc
+  NonLifPM <- calc (LAtifStack, fun6)
+  crs(NonLifPM) <- PRJc
   
   #save the combined of R0 layer for each LA
   #writeRaster(AggNOxR0, filename= file.path(Globalpath, lahome, "AggNOxR0.tif"), format="GTiff", overwrite=TRUE)
@@ -139,6 +139,7 @@ for (m in 1:length(LAlist$LANames)) {
   
   #empty the list for the next LA
   ascfilela <- NA
+  rm (VKMtotal,vkmvect, AggNOxR0, LifNx, NonLifNx, AggPM25R0, LifPM, NonLifPM) #remove files for the last LA
 
 }
 
@@ -179,20 +180,22 @@ for (cla in 1:length(LAwithCR_cocen$LANames)) {
   print(changecon)
   
   #read the R0 concentration layer for each LA, that has concentration cell values beyond the LA boundary
-  lanonlocalraster <- raster(paste0(Globalpath, lahomeC, '/','AggNOxR0.tif'))
+  lanonlocalrasterNOx <- raster(paste0(Globalpath, lahomeC, '/','AggNOxR0.tif'))
+  lanonlocalrasterPM25 <- raster(paste0(Globalpath, lahomeC, '/','AggPM25R0.tif'))
   
   #multiply the R0 concentration layer with potential change values (e.g., 0.05, 0.1, 0.5)
   #Now this value is randomly generated but in main calculation this would be based on scenario
-  changeconraster <- lanonlocalraster * changecon
+  changeconrasterNOx <- lanonlocalrasterNOx * changecon
+  changeconrasterPM25 <- lanonlocalrasterPM25 * changecon #for PM2.5
   
   #Save the changed combined R0 concentration layer for each LA
-  writeRaster(changeconraster, filename= file.path(Globalpath, lahomeC,  "changeconrasterR0S2.tif"), format="GTiff", overwrite=TRUE)
-
+  writeRaster(changeconrasterNOx, filename= file.path(Globalpath, lahomeC,  "changeconrasterNOxR0S2.tif"), format="GTiff", overwrite=TRUE)
+  writeRaster(changeconrasterPM25, filename= file.path(Globalpath, lahomeC,  "changeconrasterPM25R0S2.tif"), format="GTiff", overwrite=TRUE)
+  
+  rm (lanonlocalrasterNOx,lanonlocalrasterPM25, changeconrasterNOx, changeconrasterPM25) 
 }
 
 ##############Adding Changed concentration from other LAs within a city region ####################
-
-#CityRegions <- list ('greatermanchester')
 
 for (crh in 1:length(CityRegions)) {
   
@@ -203,22 +206,29 @@ for (crh in 1:length(CityRegions)) {
   #subset the LAs within a city region
   citylahome <- subset (LAwithCR_cocen, cityregion == crigon)
   
-  CRfilela <- list()
+  CRfilelaNOx <- list()
+  CRfilelaPM25 <- list()
   
   for (clarg in 1:length(citylahome$LANames)) {
     
     crlahome <- as.character(citylahome$LAName[clarg])
     
-    CRfilela [clarg] <- list.files(path = paste0(Globalpath, crlahome),pattern = "changeconrasterR0S2.tif$",full.names = TRUE, recursive = TRUE)
+    CRfilelaNOx [clarg] <- list.files(path = paste0(Globalpath, crlahome),pattern = "changeconrasterNOxR0S2.tif$",full.names = TRUE, recursive = TRUE)
+    
+    CRfilelaNOx [clarg] <- list.files(path = paste0(Globalpath, crlahome),pattern = "changeconrasterPM25R0S2.tif$",full.names = TRUE, recursive = TRUE)
     
     print(crlahome)
   }
   
-  CRLAfilesS <- unlist(CRfilela, recursive = TRUE)
+  CRLAfilesNOx <- unlist(CRfilelaNOx, recursive = TRUE)
   
-  print(CRLAfilesS)
+  CRLAfilesPM25 <- unlist(CRfilelaPM25, recursive = TRUE)
   
-  CRLAfilesStack <- stack(CRLAfilesS)
+  #print(CRLAfilesNOx)
+  
+  CRLAfileNOxStack <- stack(CRLAfilesNOx)
+  
+  CRLAfileNOxStack <- stack(CRLAfilesPM25)
   
   
   for (clarg in 1:length(citylahome$LANames)) {
@@ -229,9 +239,9 @@ for (crh in 1:length(CityRegions)) {
     print(crlahomeX)
   
     
-    funX <- function(x) {sum((x [-clarg]))}
+    funX <- function(x) {sum((x [-clarg]))} #sum all the defused concentration from surrounding regions
     
-    ConOthers <- calc (CRLAfilesStack, funX)
+    ConOthers <- calc (CRLAfileNOxStack, funX)
     
     writeRaster(ConOthers, filename= file.path(Globalpath, crlahomeX,  "ChangeConOthersS2.tif"), format="GTiff", overwrite=TRUE)
   }
@@ -282,7 +292,7 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
 
 #clean unnecessary files or other files that do not overwrite.
 
-do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "LifPM.tif$",full.names = TRUE, recursive = TRUE)))
+do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "ChangeConOthersS2.tif$",full.names = TRUE, recursive = TRUE)))
 
 
 #change concentration after running all the LAs
