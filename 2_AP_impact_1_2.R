@@ -215,7 +215,7 @@ for (crh in 1:length(CityRegions)) {
     
     CRfilelaNOx [clarg] <- list.files(path = paste0(Globalpath, crlahome),pattern = "changeconrasterNOxR0S2.tif$",full.names = TRUE, recursive = TRUE)
     
-    CRfilelaNOx [clarg] <- list.files(path = paste0(Globalpath, crlahome),pattern = "changeconrasterPM25R0S2.tif$",full.names = TRUE, recursive = TRUE)
+    CRfilelaPM25 [clarg] <- list.files(path = paste0(Globalpath, crlahome),pattern = "changeconrasterPM25R0S2.tif$",full.names = TRUE, recursive = TRUE)
     
     print(crlahome)
   }
@@ -227,8 +227,9 @@ for (crh in 1:length(CityRegions)) {
   #print(CRLAfilesNOx)
   
   CRLAfileNOxStack <- stack(CRLAfilesNOx)
+  print (CRLAfileNOxStack)
   
-  CRLAfileNOxStack <- stack(CRLAfilesPM25)
+  CRLAfilePM25Stack <- stack(CRLAfilesPM25)
   
   
   for (clarg in 1:length(citylahome$LANames)) {
@@ -241,11 +242,21 @@ for (crh in 1:length(CityRegions)) {
     
     funX <- function(x) {sum((x [-clarg]))} #sum all the defused concentration from surrounding regions
     
-    ConOthers <- calc (CRLAfileNOxStack, funX)
+    ConOthersNOx <- calc (CRLAfileNOxStack, funX)
     
-    writeRaster(ConOthers, filename= file.path(Globalpath, crlahomeX,  "ChangeConOthersS2.tif"), format="GTiff", overwrite=TRUE)
+    ConOthersPM25 <- calc (CRLAfilePM25Stack, funX)
+    
+    #loop for scenario and change file name like this: f <- paste0('raster', i, '.tif'), here raster is the raster file, and f is the file name in write raster
+    
+    #S2 is for scenario 2, the name have to change based on scenario
+    writeRaster(ConOthersNOx, filename= file.path(Globalpath, crlahomeX,  "ChangeConOthersNOxS2.tif"), format="GTiff", overwrite=TRUE)
+    
+    writeRaster(ConOthersPM25, filename= file.path(Globalpath, crlahomeX,  "ChangeConOthersPM25S2.tif"), format="GTiff", overwrite=TRUE)
+    
+    
   }
   
+  rm(CRLAfilesNOx, CRLAfileNOxStack, CRLAfilesPM25, CRLAfilePM25Stack)
 }
 
 ######### Estimating changed concentration for each LA based on impact factors and surrounding LAs in the city region #########
@@ -268,23 +279,33 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
   
   print(vkmsum)
   
+  # Some LAs have issues with VKM layers: Northumberland, Gateshead, City of London. Need to check with Tim
+  
   #import local in-square impact factor
-  LocalIF <- raster(paste0(Globalpath, lahomeName, '/','LIFNx.tif'))
+  LocalIFNOx <- raster(paste0(Globalpath, lahomeName, '/','LIFNx.tif'))
+  LocalIFPM25 <- raster(paste0(Globalpath, lahomeName, '/','LifPM.tif'))
   
   #import non-local impact factor
-  NonLocalIF <- raster(paste0(Globalpath, lahomeName, '/','NonLIFNx.tif'))
+  NonLocalIFNOx <- raster(paste0(Globalpath, lahomeName, '/','NonLIFNx.tif'))
+  NonLocalIFPM25 <- raster(paste0(Globalpath, lahomeName, '/','NonLifPM.tif'))
   
-  SorroundLAChangecon <- raster(paste0(Globalpath, lahomeName, '/','ChangeConOthersS2.tif'))
+  SorroundLAChangeconNOx <- raster(paste0(Globalpath, lahomeName, '/','ChangeConOthersNOxS2.tif'))
+  SorroundLAChangeconPM25 <- raster(paste0(Globalpath, lahomeName, '/','ChangeConOthersPM25S2.tif'))
   
-  LAchangedcon <- (((changecon * LocalIF * CellVKM) + (changecon * NonLocalIF * (vkmsum - CellVKM))) + SorroundLAChangecon)
+  LAchangedconNOx <- (((changecon * LocalIFNOx * CellVKM) + (changecon * NonLocalIFNOx * (vkmsum - CellVKM))) + SorroundLAChangeconNOx)
 
+  LAchangedconPM25 <- (((changecon * LocalIFPM25 * CellVKM) + (changecon * NonLocalIFPM25 * (vkmsum - CellVKM))) + SorroundLAChangeconPM25)
   
-  diffcon <- basecon - LAchangedcon
+  #diffcon <- basecon - LAchangedcon
   
   #Save the changed combined R0 concentration layer for each LA
-  writeRaster(LAchangedcon, filename= file.path(Globalpath, lahomeName,  "LAchangedconNOxS2.tif"), format="GTiff", overwrite=TRUE)
+  writeRaster(LAchangedconNOx, filename= file.path(Globalpath, lahomeName,  "LAchangedconNOxS2.tif"), format="GTiff", overwrite=TRUE)
   
-  writeRaster(diffcon, filename= file.path(Globalpath, lahomeName,  "diffconNOxS2.tif"), format="GTiff", overwrite=TRUE)
+  writeRaster(LAchangedconPM25, filename= file.path(Globalpath, lahomeName,  "LAchangedconPM25S2.tif"), format="GTiff", overwrite=TRUE)
+  
+  #writeRaster(diffcon, filename= file.path(Globalpath, lahomeName,  "diffconNOxS2.tif"), format="GTiff", overwrite=TRUE)
+  
+  rm (CellVKM, LocalIFNOx, LocalIFPM25, NonLocalIFNOx,  NonLocalIFPM25, SorroundLAChangeconNOx, SorroundLAChangeconPM25, LAchangedconNOx,LAchangedconPM25)
   
 }
 
@@ -292,7 +313,7 @@ for (laname in 1:length(LAwithCR_cocen$LANames)) {
 
 #clean unnecessary files or other files that do not overwrite.
 
-do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "ChangeConOthersS2.tif$",full.names = TRUE, recursive = TRUE)))
+do.call(file.remove, list(list.files(path = paste0(Globalpath),pattern = "LAchangedconPM25S2.tif$",full.names = TRUE, recursive = TRUE)))
 
 
 #change concentration after running all the LAs
